@@ -68,7 +68,7 @@ local function len(t)
     return n
 end
 
---cli arguments stuff(I wrote it)
+--cli arguments stuff(I wrote it, simple, but still I like it)
 function help()
     print("Usage: script.lua [path to data] [output folder]")
     os.exit()
@@ -141,6 +141,14 @@ function loadData(dataName, path, dataNameShort)
     return t
 end
 
+function getUsername(uuid)
+    return essentialsUserdata[uuid]["last-account-name"] or uuid
+end
+
+function getTeamName(id)
+    return teams[id].name
+end
+
 function doChecks()
     print("Checking if data path is valid")
     if not checkDirectory(dataPath) then
@@ -159,7 +167,7 @@ function doChecks()
 
     print("Making sure it's not empty")
     local contents = scandir(dataPath..'/Essentials/userdata')
-    if #contents==2 then
+    if #contents==2 then --2 means it contains only . and .., so it's empty
         print("Can't proceed without Essentials userdata")
         os.exit()
     else
@@ -182,6 +190,24 @@ function makeDirectory(dir)
     local path = outputPath..'/'..dir
     print("Creating "..path)
     os.execute("mkdir "..path)
+end
+
+function tableToSrting(t, fun)
+    local str = ""
+    for i=1, #t do
+        local thing
+
+        if fun then
+            thing = fun(t[i])
+        else
+            thing = t[i]
+        end
+
+        str = str..thing..", "
+    end
+    str = str:sub(1, #str-2)
+
+    return str
 end
 
 function writePlayerStats()
@@ -238,8 +264,7 @@ function writePlayerStats()
         end
 
         if hasMoney or setHome or team.name then
-            local username = v["last-account-name"]
-            local title = username or k  -- Use username if available, otherwise use UUID
+            local title = getUsername(k)
             player = player.."==="..title.."===\n"
 
             if hasMoney then
@@ -280,12 +305,8 @@ function writePlayerStats()
     if #noStatUUIDs>0 then
         file:write("---Players with no stats---\n")
         for i=1, #noStatUUIDs do
-            local username = essentialsUserdata[noStatUUIDs[i]]["last-account-name"]
-            if username then
-                file:write(username..'\n')
-            else
-                file:write(noStatUUIDs[i]..'\n')
-            end
+            local username = getUsername(noStatUUIDs[i])
+            file:write(username..'\n')
         end
     end
 
@@ -360,33 +381,17 @@ function writeTeamInfo()
         end
 
         if bans then
-            bannedPlayers = ""
-            for i=1, #bans do
-                local name = essentialsUserdata[bans[i]]["last-account-name"] or bans[i]
-                bannedPlayers = bannedPlayers..name..", "
-            end
-            bannedPlayers = bannedPlayers:sub(1, #bannedPlayers-2)
-
+            local bannedPlayers = tableToSrting(bans, getUsername)
             file:write("Banned players: "..bannedPlayers..'\n')
         end
 
         if warps then
-            local warpsList = ""
-            for i=1, #warps do
-                warpsList = warpsList..warps[i]..", "
-            end
-            warpsList = warpsList:sub(1, #warpsList-2)
-
+            local warpsList = tableToSrting(warps)
             file:write("Warps: "..warpsList..'\n')
         end
 
         if allies then
-            alliesString = ""
-            for i=1, #allies do
-                alliesString = alliesString..teams[allies[i]].name..", "
-            end
-            alliesString = alliesString:sub(1, #alliesString-2)
-
+            local alliesString = tableToSrting(allies, getTeamName)
             file:write("Allies: "..alliesString..'\n')
         end
 
