@@ -149,6 +149,13 @@ function getTeamName(id)
     return teams[id].name
 end
 
+function playerRankInTeam(str)
+    local escaped = str:gsub("-", "%%-")
+    str = str:sub(1, str:find(',')-1)
+
+    return teamPositions[str]
+end
+
 function doChecks()
     print("Checking if data path is valid")
     if not checkDirectory(dataPath) then
@@ -339,47 +346,54 @@ function writeTeamInfo()
     local file = io.open(outputPath.."/teams/teams.txt", "w")
 
     for k,v in pairs(teams) do
+        local color = v.color
         local desc = v.description
         local open = tostring(v.open)
-        local home = v.home
-        local color = v.color
-        local players = v.players
+        local pvp = tostring(v.pvp)
+        local score = v.score
+        local money = v.money
         local level = v.level
         local tag = v.tag
-        local score = v.score
+        local allies = v.allies
+        local players = v.players
+        local home = v.home
         local bans = v.bans
         local warps = v.warps
-        local allies = v.allies
 
         file:write("==="..v.name.."===\n")
         if desc~='' then
             file:write("Description: "..desc..'\n')
         end
-        file:write("Open: "..open..'\n')
-        if home~='' then
-            file:write("Home: "..home..'\n')
-        end
+
         file:write("Color: "..colors[color]..'\n')
+        file:write("Open: "..open..'\n')
+        file:write("PvP: "..pvp..'\n')
 
-        local playersString = ""
-        for i=1, #players do
-            local str = players[i]
-            local escaped = str:gsub("-", "%%-")
-            str = str:sub(1, str:find(',')-1)
-
-            playersString = playersString..teamPositions[str]..", "
+        if score then
+            file:write("Score: "..score..'\n')
         end
-        playersString = playersString:sub(1, #playersString-2)
-        file:write("Players: "..playersString..'\n')
+
+        if money then
+            file:write("Money: "..money..'\n')
+        end
 
         file:write("Level: "..level..'\n')
+
         if tag=='' then
             tag = v.name
         end
         file:write("Tag: "..tag..'\n')
 
-        if score then
-            file:write("Score: "..score..'\n')
+        if allies then
+            local alliesString = tableToSrting(allies, getTeamName)
+            file:write("Allies: "..alliesString..'\n')
+        end
+
+        local playersString = tableToSrting(players, playerRankInTeam)
+        file:write("Players: "..playersString..'\n')
+
+        if home~='' then
+            file:write("Home: "..home..'\n')
         end
 
         if bans then
@@ -390,11 +404,6 @@ function writeTeamInfo()
         if warps then
             local warpsList = tableToSrting(warps)
             file:write("Warps: "..warpsList..'\n')
-        end
-
-        if allies then
-            local alliesString = tableToSrting(allies, getTeamName)
-            file:write("Allies: "..alliesString..'\n')
         end
 
         file:write('\n')
