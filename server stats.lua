@@ -373,9 +373,11 @@ function writeTeamInfo()
         file:write("Players: "..playersString..'\n')
 
         file:write("Level: "..level..'\n')
-        if tag~='' then
-            file:write("Tag: "..tag..'\n')
+        if tag=='' then
+            tag = v.name
         end
+        file:write("Tag: "..tag..'\n')
+
         if score then
             file:write("Score: "..score..'\n')
         end
