@@ -229,7 +229,8 @@ function writePlayerStats()
         local team = {}
 
         local money = v.money
-        if money ~= '0' then
+        local broke = v.money=='0' or v.money=='0.0'
+        if not broke then
             hasMoney = true
         end
 
@@ -321,7 +322,8 @@ function writePlayerStats()
 
     playerBalances = {}
     for k,v in pairs(essentialsUserdata) do
-        if v.money~='0' then
+        local broke = v.money=='0' or v.money=='0.0'
+        if not broke then
             playerBalances[k] = tonumber(v.money)
         end
     end
@@ -407,9 +409,34 @@ function writeTeamInfo()
         end
 
         file:write('\n')
+
+        if teamBalances then
+            teamBalances = sortDict(teamBalances)
+        end
     end
 
     file:close()
+
+    teamBalances = {}
+    for k,v in pairs(teams) do
+        if v.money~=0 then
+            teamBalances[k] = v.money
+        end
+    end
+
+    teamBalances = sortDict(teamBalances)
+end
+
+function generateTeamBaltop()
+    print("Generating team balance top")
+    local file = io.open(outputPath.."/teams/balance top.txt", "w")
+
+    local n = 0
+    for _, entry in ipairs(teamBalances) do
+        n=n+1
+        local name = teams[entry.key].name
+        file:write(n..". "..name..": "..entry.value..'\n')
+    end
 end
 
 function generateStats()
@@ -429,6 +456,10 @@ function generateStats()
 
     if betterTeams then
         writeTeamInfo()
+
+        if teamBalances and len(teamBalances)>0 then
+            generateTeamBaltop()
+        end
     end
 end
 
