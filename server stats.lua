@@ -149,6 +149,13 @@ function getTeamName(id)
     return teams[id].name
 end
 
+function playerRankInTeam(str)
+    local escaped = str:gsub("-", "%%-")
+    str = str:sub(1, str:find(',')-1)
+
+    return teamPositions[str]
+end
+
 function doChecks()
     print("Checking if data path is valid")
     if not checkDirectory(dataPath) then
@@ -222,7 +229,8 @@ function writePlayerStats()
         local team = {}
 
         local money = v.money
-        if money ~= '0' then
+        local broke = v.money=='0' or v.money=='0.0'
+        if not broke then
             hasMoney = true
         end
 
@@ -311,25 +319,26 @@ function writePlayerStats()
     end
 
     file:close()
+
+    playerBalances = {}
+    for k,v in pairs(essentialsUserdata) do
+        local broke = v.money=='0' or v.money=='0.0'
+        if not broke then
+            playerBalances[k] = tonumber(v.money)
+        end
+    end
+
+    playerBalances = sortDict(playerBalances)
 end
 
 function generateBalanceTop()
     print("Generating balance top")
     local file = io.open(outputPath.."/players/balance top.txt", "w")
 
-    local balances = {}
-    for k,v in pairs(essentialsUserdata) do
-        if v.money~='0' then
-            balances[k] = tonumber(v.money)
-        end
-    end
-
-    balances = sortDict(balances)
-
     local n = 0
-    for _, entry in ipairs(balances) do
+    for _, entry in ipairs(playerBalances) do
         n=n+1
-        local name = essentialsUserdata[entry.key]["last-account-name"] or entry.key
+        local name = getUsername(entry.key)
         file:write(n..". "..name..": "..entry.value..'\n')
     end
 end
@@ -339,45 +348,54 @@ function writeTeamInfo()
     local file = io.open(outputPath.."/teams/teams.txt", "w")
 
     for k,v in pairs(teams) do
+        local color = v.color
         local desc = v.description
         local open = tostring(v.open)
-        local home = v.home
-        local color = v.color
-        local players = v.players
+        local pvp = tostring(v.pvp)
+        local score = v.score
+        local money = v.money
         local level = v.level
         local tag = v.tag
-        local score = v.score
+        local allies = v.allies
+        local players = v.players
+        local home = v.home
         local bans = v.bans
         local warps = v.warps
-        local allies = v.allies
 
         file:write("==="..v.name.."===\n")
         if desc~='' then
             file:write("Description: "..desc..'\n')
         end
-        file:write("Open: "..open..'\n')
-        if home~='' then
-            file:write("Home: "..home..'\n')
-        end
+
         file:write("Color: "..colors[color]..'\n')
+        file:write("Open: "..open..'\n')
+        file:write("PvP: "..pvp..'\n')
 
-        local playersString = ""
-        for i=1, #players do
-            local str = players[i]
-            local escaped = str:gsub("-", "%%-")
-            str = str:sub(1, str:find(',')-1)
-
-            playersString = playersString..teamPositions[str]..", "
-        end
-        playersString = playersString:sub(1, #playersString-2)
-        file:write("Players: "..playersString..'\n')
-
-        file:write("Level: "..level..'\n')
-        if tag~='' then
-            file:write("Tag: "..tag..'\n')
-        end
         if score then
             file:write("Score: "..score..'\n')
+        end
+
+        if money then
+            file:write("Money: "..money..'\n')
+        end
+
+        file:write("Level: "..level..'\n')
+
+        if tag=='' then
+            tag = v.name
+        end
+        file:write("Tag: "..tag..'\n')
+
+        if allies then
+            local alliesString = tableToSrting(allies, getTeamName)
+            file:write("Allies: "..alliesString..'\n')
+        end
+
+        local playersString = tableToSrting(players, playerRankInTeam)
+        file:write("Players: "..playersString..'\n')
+
+        if home~='' then
+            file:write("Home: "..home..'\n')
         end
 
         if bans then
@@ -390,15 +408,35 @@ function writeTeamInfo()
             file:write("Warps: "..warpsList..'\n')
         end
 
-        if allies then
-            local alliesString = tableToSrting(allies, getTeamName)
-            file:write("Allies: "..alliesString..'\n')
-        end
-
         file:write('\n')
+
+        if teamBalances then
+            teamBalances = sortDict(teamBalances)
+        end
     end
 
     file:close()
+
+    teamBalances = {}
+    for k,v in pairs(teams) do
+        if v.money~=0 then
+            teamBalances[k] = v.money
+        end
+    end
+
+    teamBalances = sortDict(teamBalances)
+end
+
+function generateTeamBaltop()
+    print("Generating team balance top")
+    local file = io.open(outputPath.."/teams/balance top.txt", "w")
+
+    local n = 0
+    for _, entry in ipairs(teamBalances) do
+        n=n+1
+        local name = teams[entry.key].name
+        file:write(n..". "..name..": "..entry.value..'\n')
+    end
 end
 
 function generateStats()
@@ -411,10 +449,17 @@ function generateStats()
     end
 
     writePlayerStats()
-    generateBalanceTop()
+
+    if len(playerBalances)>0 then
+        generateBalanceTop()
+    end
 
     if betterTeams then
         writeTeamInfo()
+
+        if teamBalances and len(teamBalances)>0 then
+            generateTeamBaltop()
+        end
     end
 end
 
