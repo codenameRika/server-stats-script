@@ -311,25 +311,25 @@ function writePlayerStats()
     end
 
     file:close()
+
+    playerBalances = {}
+    for k,v in pairs(essentialsUserdata) do
+        if v.money~='0' then
+            playerBalances[k] = tonumber(v.money)
+        end
+    end
+
+    playerBalances = sortDict(playerBalances)
 end
 
 function generateBalanceTop()
     print("Generating balance top")
     local file = io.open(outputPath.."/players/balance top.txt", "w")
 
-    local balances = {}
-    for k,v in pairs(essentialsUserdata) do
-        if v.money~='0' then
-            balances[k] = tonumber(v.money)
-        end
-    end
-
-    balances = sortDict(balances)
-
     local n = 0
-    for _, entry in ipairs(balances) do
+    for _, entry in ipairs(playerBalances) do
         n=n+1
-        local name = essentialsUserdata[entry.key]["last-account-name"] or entry.key
+        local name = getUsername(entry.key)
         file:write(n..". "..name..": "..entry.value..'\n')
     end
 end
@@ -411,7 +411,10 @@ function generateStats()
     end
 
     writePlayerStats()
-    generateBalanceTop()
+
+    if len(playerBalances)>0 then
+        generateBalanceTop()
+    end
 
     if betterTeams then
         writeTeamInfo()
